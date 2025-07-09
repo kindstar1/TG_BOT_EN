@@ -164,6 +164,8 @@ def add_word_third_step(message):
     ses.add(assoc_2)
     ses.commit()
     bot.send_message(message.chat.id, f"Слово успешно добавлено в словарь!")
+    words_count = ses.query(UserWords).filter(UserWords.user_id == tg_id).count()
+    bot.send_message(message.chat.id, f"Сейчас вы изучаете {words_count} слов(а)")
     ses.close()
     bot.delete_state(message.from_user.id, message.chat.id)
 

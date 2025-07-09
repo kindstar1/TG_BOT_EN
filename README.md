@@ -11,15 +11,15 @@
 
 ## Валидация
 Проверьте схему БД
-Схема сохранена в текущем репозитории
-<[schema](database_schema.png)>
+Схема сохранена в текущем репозитории - 
+[schema](database_schema.png)
 
 ## Установка
 
 #### 1. Клонируйте репозиторий
 
-git clone <[URL-репозитория](https://github.com/kindstar1/TG_BOT_EN)>
-cd TG_BOT_EN
+* git clone [URL-репозитория](https://github.com/kindstar1/TG_BOT_EN)
+* cd TG_BOT_EN
 
 #### 2. Создайте и активируйте виртуальное окружение
 
@@ -27,7 +27,7 @@ cd TG_BOT_EN
 python -m venv .venv
 
 ##### Активация (Windows)
-.\.venv\Scripts\activate
+`.\.venv\Scripts\activate`
 
 ##### Активация (macOS/Linux)
 source .venv/bin/activate
@@ -39,9 +39,11 @@ pip install -r requirements.txt
 Создайте файл .env в корневой папке проекта и добавьте в него следующие переменные, подставив свои значения:
 
 *Токен, полученный от @BotFather в Telegram*
+
 TELEGRAM_BOT_TOKEN="ВАШ_ТЕЛЕГРАМ_ТОКЕН"
 
 *Строка подключения к вашей базе данных PostgreSQL*
+
 DATABASE_URL="postgresql://user:password@localhost:5432/database_name"
 
 ## Запуск проекта
@@ -49,8 +51,10 @@ DATABASE_URL="postgresql://user:password@localhost:5432/database_name"
 
 #### Шаг 1: Инициализация базы данных (выполняется один раз)
 Эта команда создаст необходимые таблицы в базе данных и добавит начальный набор слов.
+
 python scripts/init_db.py
 
 #### Шаг 2: Запуск бота
 Эта команда запускает основного бота.
+
 python -m src.bot
