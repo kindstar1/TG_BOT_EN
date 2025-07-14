@@ -7,6 +7,7 @@ from sqlalchemy import select, and_
 from .config import TELEGRAM_BOT_TOKEN
 from .database import SessionLocal
 from .models import Users, MainWords, UserWords
+from sqlalchemy import func
 
 
 print("Start telegram bot...")
@@ -52,15 +53,13 @@ def create_cards(message):
     if user is None:
         user = Users(user_id=tg_id)
         ses.add(user)
-        start_word = ses.query(MainWords).all()
-        for word in start_word:
-            assoc = UserWords(
-                user_id=user.user_id, mword_id=word.mword_id, dlt_flag=False
-            )
+        for i in range(10):
+            find_word = ses.query(MainWords).order_by(func.random()).first()
+            assoc = UserWords(user_id=user.user_id, mword_id=find_word.mword_id, dlt_flag=False)
             ses.add(assoc)
         ses.commit()
         cid = message.chat.id
-        bot.send_message(cid, "Hello, let study English...")
+        bot.send_message(cid, "Hello, let's study English...")
     markup = types.ReplyKeyboardMarkup(row_width=2)
     global buttons
     buttons = []
@@ -70,10 +69,11 @@ def create_cards(message):
     q = (
         select(MainWords.rus_word, MainWords.en_word)
         .join(UserWords)
-        .where(and_(UserWords.user_id == user.user_id, UserWords.dlt_flag == False))
+        .where(and_(UserWords.user_id == user.user_id, UserWords.dlt_flag == False)).order_by(func.random()) 
+    .limit(4)  
     )
-    res = ses.execute(q).all()
-    random_tupples = random.sample(res, 4)
+    random_tupples = ses.execute(q).all()
+    # random_tupples = random.sample(res, 4)
     fix_first = random_tupples[0]
     target_word = fix_first[1]
     translate = fix_first[0]
