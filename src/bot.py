@@ -4,9 +4,9 @@ from telebot.storage import StateMemoryStorage
 from telebot.handler_backends import State, StatesGroup
 from sqlalchemy import select, and_
 
-from .config import TELEGRAM_BOT_TOKEN
-from .database import SessionLocal
-from .models import Users, MainWords, UserWords
+from config import TELEGRAM_BOT_TOKEN
+from database import SessionLocal
+from models import Users, MainWords, UserWords
 from sqlalchemy import func
 
 
@@ -53,9 +53,13 @@ def create_cards(message):
     if user is None:
         user = Users(user_id=tg_id)
         ses.add(user)
-        for i in range(10):
-            find_word = ses.query(MainWords).order_by(func.random()).first()
-            assoc = UserWords(user_id=user.user_id, mword_id=find_word.mword_id, dlt_flag=False)
+        find_en_word_tup = ses.query(MainWords.en_word).all()
+        find_en_word = [item[0] for item in find_en_word_tup]
+        find_rus_word_tup = ses.query(MainWords.rus_word).all()
+        find_rus_word = [item[0] for item in find_rus_word_tup]
+        dict_ = dict(zip(find_en_word, find_rus_word))
+        for key, value in dict_.items():
+            assoc = UserWords(user_id=user.user_id, pers_en_word=key, pers_rus_word=value, dlt_flag=False)
             ses.add(assoc)
         ses.commit()
         cid = message.chat.id
@@ -63,12 +67,9 @@ def create_cards(message):
     markup = types.ReplyKeyboardMarkup(row_width=2)
     global buttons
     buttons = []
-    active_user_words = (
-        ses.query(UserWords).filter_by(user_id=tg_id, dlt_flag=False).all()
-    )
+    # active_user_words = (ses.query(UserWords).filter_by(user_id=tg_id, dlt_flag=False).all())
     q = (
-        select(MainWords.rus_word, MainWords.en_word)
-        .join(UserWords)
+        select(UserWords.pers_rus_word, UserWords.pers_en_word)
         .where(and_(UserWords.user_id == user.user_id, UserWords.dlt_flag == False)).order_by(func.random()) 
     .limit(4)  
     )
@@ -115,14 +116,13 @@ def delete_word_second_step(message):
     tg_id = message.from_user.id
     ses = SessionLocal()
     q = (
-        select(MainWords.rus_word)
-        .join(UserWords)
-        .where(and_(UserWords.user_id == tg_id, MainWords.rus_word == russ_word))
+        select(UserWords)
+        .where(and_(UserWords.user_id == tg_id, UserWords.pers_rus_word == russ_word))
     )
     result = ses.execute(q).all()
     if len(result)!= 0:
-        change_flg = ses.query(UserWords).join(MainWords).filter(and_(
-            UserWords.user_id == tg_id, MainWords.rus_word == russ_word)).first()
+        change_flg = ses.query(UserWords).filter(and_(
+            UserWords.user_id == tg_id, UserWords.pers_rus_word == russ_word)).first()
         change_flg.dlt_flag = True
         ses.commit()
         bot.send_message(message.chat.id, "Слово удалено")
@@ -147,23 +147,17 @@ def add_word_second_step(message):
 @bot.message_handler(state=MyStates.translate_word)
 def add_word_third_step(message):
     ses = SessionLocal()
-    eng_word = message.text
     tg_id = message.from_user.id
     user = ses.query(Users).filter_by(user_id=tg_id).first()
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-        russ_word = data["rus_word"]
-    ses = SessionLocal() 
-    existing_word = ses.query(MainWords).filter_by(rus_word=russ_word).first()
-    if existing_word is None:
-        existing_word = MainWords(rus_word=russ_word, en_word=eng_word)
-        ses.add(existing_word)
+        data["eng_word"] = message.text
+        ses = SessionLocal() 
+        assoc = UserWords(
+            user_id=user.user_id, pers_en_word=data['eng_word'], pers_rus_word=data['rus_word'], dlt_flag=False
+        )
+        ses.add(assoc)
         ses.commit()
-    assoc_2 = UserWords(
-        user_id=user.user_id, mword_id=existing_word.mword_id, dlt_flag=False
-    )
-    ses.add(assoc_2)
-    ses.commit()
-    bot.send_message(message.chat.id, f"Слово успешно добавлено в словарь!")
+        bot.send_message(message.chat.id, f"Слово успешно добавлено в словарь!")
     words_count = ses.query(UserWords).filter(UserWords.user_id == tg_id, UserWords.dlt_flag == False).count()
     bot.send_message(message.chat.id, f"Сейчас вы изучаете {words_count} слов(а)")
     ses.close()
